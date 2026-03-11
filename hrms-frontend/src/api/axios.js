@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { store } from '../store';
-import { logout } from '../store/authSlice';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  // Using Vite proxy configured in vite.config.js instead of hardcoded baseURL
+  baseURL: '/',
 });
 
 // Request interceptor to add the auth token header to requests

@@ -36,7 +36,21 @@ const Login = () => {
       navigate('/');
     } catch (err) {
       console.error('Login failed', err);
-      setError('Invalid username or password');
+      // Determine the type of error to show a more helpful message
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        if (err.response.status === 401 || err.response.status === 403) {
+            setError('Invalid username or password');
+        } else {
+            setError(`Server error: ${err.response.status}`);
+        }
+      } else if (err.request) {
+        // The request was made but no response was received
+        setError('Network error. Cannot connect to the server at http://localhost:8080. Is it running?');
+      } else {
+        // Something happened in setting up the request
+        setError('An unexpected error occurred.');
+      }
     } finally {
       setLoading(false);
     }
