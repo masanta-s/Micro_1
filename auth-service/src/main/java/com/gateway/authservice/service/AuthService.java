@@ -1,6 +1,7 @@
 package com.gateway.authservice.service;
 
 import com.gateway.authservice.dto.LoginResponse;
+import com.gateway.authservice.dto.UserLookupResponse;
 import com.gateway.authservice.entity.Role;
 import com.gateway.authservice.entity.User;
 import com.gateway.authservice.repository.RoleRepository;
@@ -10,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -100,5 +102,10 @@ public class AuthService {
         user.setRoles(Set.of(role));
 
         userRepository.save(user);
+    }
+
+    public Optional<UserLookupResponse> findUserLookupById(Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> new UserLookupResponse(user.getId(), user.getUsername()));
     }
 }

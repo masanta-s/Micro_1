@@ -21,6 +21,15 @@ services:
     depends_on:
       discovery-server:
         condition: service_healthy
+      postgres-contact:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-contact:5432/contactinfodb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+      AUTH_SERVICE_BASE_URL: http://auth-service:9000
     networks:
       - micro-net
 
@@ -147,9 +156,29 @@ services:
     networks:
       - micro-net
 
+  postgres-contact:
+    image: postgres:16
+    container_name: postgres-contact
+    environment:
+      POSTGRES_DB: contactinfodb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_contact_data:/var/lib/postgresql/data
+    networks:
+      - micro-net
+    healthcheck:
+      test: [ "CMD","pg_isready","-U","postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 networks:
   micro-net:
     external: true
 
 volumes:
   postgres_data:
+  postgres_contact_data:
