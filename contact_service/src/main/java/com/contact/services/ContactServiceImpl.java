@@ -47,7 +47,7 @@ public class ContactServiceImpl implements ContactService {
 
     @Override
     public List<PEmail> getPrimaryEmailsByUserId(Long userId) {
-        return emailRepo.findByIdUserIdAndIsPrimaryTrue(userId);
+        return emailRepo.findByIdUserIdAndIdIsPrimaryTrue(userId);
     }
 
     @Override
@@ -59,7 +59,11 @@ public class ContactServiceImpl implements ContactService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "emailType is required");
         }
 
-        email.setId(new PEmailId(owner.id(), email.getEmailType()));
+        if (email.getIsPrimary() == null) {
+            email.setIsPrimary(false);
+        }
+
+        email.setId(new PEmailId(owner.id(), email.getEmailType(), email.getIsPrimary()));
         email.setCreatedAt(OffsetDateTime.now());
         email.setCreatedById(actor.id());
         email.setCreatedByUsername(actor.username());
@@ -78,8 +82,23 @@ public class ContactServiceImpl implements ContactService {
         authService.requireUser(userId);
         AuthService.AuthUserResponse actor = resolveActor(userId);
 
-        PEmailId id = new PEmailId(userId, emailType);
-        return emailRepo.findById(id).map(existing -> {
+        // find all emails for the user and type (isPrimary is part of the PK)
+        List<PEmail> found = emailRepo.findByIdUserIdAndIdEmailTypeIgnoreCase(userId, emailType);
+        if (found.isEmpty()) return Optional.empty();
+
+        // prefer the one that matches payload.isPrimary if provided, otherwise take first
+        PEmail target = null;
+        if (payload.getIsPrimary() != null) {
+            for (PEmail e : found) {
+                if (payload.getIsPrimary().equals(e.getIsPrimary())) {
+                    target = e; break;
+                }
+            }
+        }
+        if (target == null) target = found.get(0);
+
+        final PEmail existing = target;
+        return Optional.ofNullable(existing).map(ex -> {
             if (payload.getEmailAddress() != null) {
                 existing.setEmailAddress(payload.getEmailAddress());
             }
@@ -95,7 +114,10 @@ public class ContactServiceImpl implements ContactService {
     @Override
     public void deleteEmail(Long userId, String emailType) {
         authService.requireUser(userId);
-        emailRepo.deleteById(new PEmailId(userId, emailType));
+        List<PEmail> found = emailRepo.findByIdUserIdAndIdEmailTypeIgnoreCase(userId, emailType);
+        if (!found.isEmpty()) {
+            emailRepo.deleteAll(found);
+        }
     }
 
     @Override
@@ -119,8 +141,13 @@ public class ContactServiceImpl implements ContactService {
         if (phone.getPhoneType() == null || phone.getPhoneType().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phoneType is required");
         }
+        // ensure isPrimary has a default like emails do
+        if (phone.getIsPrimary() == null) {
+            phone.setIsPrimary(false);
+        }
 
-        phone.setId(new PPhoneId(owner.id(), phone.getPhoneType()));
+        // PPhoneId requires (userId, phoneType, isPrimary)
+        phone.setId(new PPhoneId(owner.id(), phone.getPhoneType(), phone.getIsPrimary()));
         phone.setCreatedAt(OffsetDateTime.now());
         phone.setCreatedById(actor.id());
         phone.setCreatedByUsername(actor.username());
@@ -134,28 +161,39 @@ public class ContactServiceImpl implements ContactService {
     public Optional<PPhone> updatePhone(Long userId, String phoneType, PPhone payload) {
         authService.requireUser(userId);
         AuthService.AuthUserResponse actor = resolveActor(userId);
+        List<PPhone> found = phoneRepo.findByIdUserIdAndIdPhoneTypeIgnoreCase(userId, phoneType);
+        if (found.isEmpty()) return Optional.empty();
 
-        PPhoneId id = new PPhoneId(userId, phoneType);
-        return phoneRepo.findById(id).map(existing -> {
+        PPhone target = null;
+        if (payload.getIsPrimary() != null) {
+            for (PPhone p : found) {
+                if (payload.getIsPrimary().equals(p.getIsPrimary())) { target = p; break; }
+            }
+        }
+        if (target == null) target = found.get(0);
+
+        final PPhone existing = target;
+        return Optional.ofNullable(existing).map(ex -> {
             if (payload.getCountryCode() != null) {
-                existing.setCountryCode(payload.getCountryCode());
+                ex.setCountryCode(payload.getCountryCode());
             }
             if (payload.getAreaCode() != null) {
-                existing.setAreaCode(payload.getAreaCode());
+                ex.setAreaCode(payload.getAreaCode());
             }
             if (payload.getPhoneNumber() != null) {
-                existing.setPhoneNumber(payload.getPhoneNumber());
+                ex.setPhoneNumber(payload.getPhoneNumber());
             }
-            existing.setChangedById(actor.id());
-            existing.setChangedByUsername(actor.username());
-            return phoneRepo.save(existing);
+            ex.setChangedById(actor.id());
+            ex.setChangedByUsername(actor.username());
+            return phoneRepo.save(ex);
         });
     }
 
     @Override
     public void deletePhone(Long userId, String phoneType) {
         authService.requireUser(userId);
-        phoneRepo.deleteById(new PPhoneId(userId, phoneType));
+        List<PPhone> found = phoneRepo.findByIdUserIdAndIdPhoneTypeIgnoreCase(userId, phoneType);
+        if (!found.isEmpty()) phoneRepo.deleteAll(found);
     }
 
     private AuthService.AuthUserResponse resolveActor(Long fallbackUserId) {

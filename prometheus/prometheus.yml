@@ -16,3 +16,8 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["api-gateway:8080"]
+
+  - job_name: 'pickvaluelist-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'pickvaluelist-service:9004' ]

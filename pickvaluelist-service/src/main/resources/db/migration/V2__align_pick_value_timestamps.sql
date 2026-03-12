@@ -1,0 +1,7 @@
+ALTER TABLE pick_value_list
+    ALTER COLUMN created_at TYPE TIMESTAMP WITH TIME ZONE
+    USING created_at AT TIME ZONE 'UTC';
+
+ALTER TABLE pick_value_list
+    ALTER COLUMN changed_at TYPE TIMESTAMP WITH TIME ZONE
+    USING changed_at AT TIME ZONE 'UTC';

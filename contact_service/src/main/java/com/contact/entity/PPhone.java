@@ -53,6 +53,17 @@ public class PPhone {
         this.id.setPhoneType(phoneType);
     }
 
+    public Boolean getIsPrimary() {
+        return id == null ? null : id.getIsPrimary();
+    }
+
+    public void setIsPrimary(Boolean isPrimary) {
+        if (this.id == null) {
+            this.id = new PPhoneId();
+        }
+        this.id.setIsPrimary(isPrimary);
+    }
+
     public String getCountryCode() { return countryCode; }
     public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
 

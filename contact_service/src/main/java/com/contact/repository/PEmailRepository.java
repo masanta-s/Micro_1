@@ -12,5 +12,5 @@ public interface PEmailRepository extends JpaRepository<PEmail, PEmailId> {
 
     List<PEmail> findByIdUserIdAndIdEmailTypeIgnoreCase(Long userId, String emailType);
 
-    List<PEmail> findByIdUserIdAndIsPrimaryTrue(Long userId);
+    List<PEmail> findByIdUserIdAndIdIsPrimaryTrue(Long userId);
 }

@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -30,9 +31,13 @@ public class JwtAuthenticationFilter implements GlobalFilter {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
         String path = exchange.getRequest().getURI().getPath();
+        HttpMethod method = exchange.getRequest().getMethod();
 
-        // 🔓 Public endpoints
         if (path.startsWith("/auth")) {
+            return chain.filter(exchange);
+        }
+
+        if (path.startsWith("/pickvalues") && HttpMethod.GET.equals(method)) {
             return chain.filter(exchange);
         }
 
@@ -58,38 +63,22 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             List<String> roles = jwtUtil.getRoles(claims);
             List<String> finalRoles = (roles == null) ? List.of() : roles;
 
-            // 🔐 ROUTE-BASED AUTHORIZATION
             if (path.startsWith("/admin") && !finalRoles.contains("ROLE_ADMIN")) {
-                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                byte[] bytes = "Admin role required".getBytes();
-                DataBuffer buffer = exchange.getResponse()
-                        .bufferFactory()
-                        .wrap(bytes);
-
-                return exchange.getResponse().writeWith(Mono.just(buffer));
+                return forbidden(exchange, "Admin role required");
             }
 
             if (path.startsWith("/contacts") && !finalRoles.contains("ROLE_ADMIN")) {
-                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                byte[] bytes = "Admin role required".getBytes();
-                DataBuffer buffer = exchange.getResponse()
-                        .bufferFactory()
-                        .wrap(bytes);
+                return forbidden(exchange, "Admin role required");
+            }
 
-                return exchange.getResponse().writeWith(Mono.just(buffer));
+            if (path.startsWith("/pickvalues") && !HttpMethod.GET.equals(method) && !finalRoles.contains("ROLE_ADMIN")) {
+                return forbidden(exchange, "Admin role required");
             }
 
             if (path.startsWith("/users") && !(finalRoles.contains("ROLE_USER") || finalRoles.contains("ROLE_ADMIN"))) {
-                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                byte[] bytes = "Admin role or User role required".getBytes();
-                DataBuffer buffer = exchange.getResponse()
-                        .bufferFactory()
-                        .wrap(bytes);
-
-                return exchange.getResponse().writeWith(Mono.just(buffer));
+                return forbidden(exchange, "Admin role or User role required");
             }
 
-            // ✅ Forward headers
             exchange = exchange.mutate()
                     .request(r -> r
                             .header("X-User-Id", claims.getSubject())
@@ -100,7 +89,6 @@ public class JwtAuthenticationFilter implements GlobalFilter {
             return chain.filter(exchange);
 
         } catch (Exception e) {
-
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
 
             byte[] bytes = "Invalid or expired token".getBytes();
@@ -113,9 +101,10 @@ public class JwtAuthenticationFilter implements GlobalFilter {
         }
     }
 
-
-    private Mono<Void> unauthorized(ServerWebExchange exchange) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        return exchange.getResponse().setComplete();
+    private Mono<Void> forbidden(ServerWebExchange exchange, String message) {
+        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+        byte[] bytes = message.getBytes();
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+        return exchange.getResponse().writeWith(Mono.just(buffer));
     }
 }

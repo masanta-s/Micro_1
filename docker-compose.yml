@@ -114,6 +114,9 @@ services:
     container_name: api-gateway
     ports:
       - "8080:8080"
+    environment:
+      - SPRING_SECURITY_USER_NAME=admin
+      - SPRING_SECURITY_USER_PASSWORD=adminpass
     depends_on:
       user-service:
         condition: service_started
@@ -175,6 +178,45 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-pickvalue:
+    image: postgres:16
+    container_name: postgres-pickvalue
+    environment:
+      POSTGRES_DB: pickvaluelistdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_pickvalue_data:/var/lib/postgresql/data
+    networks:
+      - micro-net
+    healthcheck:
+      test: [ "CMD","pg_isready","-U","postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  pickvaluelist-service:
+    build: ./pickvaluelist-service
+    image: pickvaluelist-service:latest
+    container_name: pickvaluelist-service
+    ports:
+      - "9004:9004"
+    depends_on:
+      postgres-pickvalue:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pickvalue:5432/pickvaluelistdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+    networks:
+      - micro-net
+
 networks:
   micro-net:
     external: true
@@ -182,3 +224,4 @@ networks:
 volumes:
   postgres_data:
   postgres_contact_data:
+  postgres_pickvalue_data:

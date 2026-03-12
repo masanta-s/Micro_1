@@ -21,4 +21,11 @@ public class FallbackController {
                 "message", "Contact service is currently unavailable. Please try again later."
         );
     }
+
+    @GetMapping("/fallback/pickvalues")
+    public Map<String, String> pickValueFallback() {
+        return Map.of(
+                "message", "Pick value list service is currently unavailable. Please try again later."
+        );
+    }
 }

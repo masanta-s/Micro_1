@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS p_email (
     created_by_username VARCHAR(255),
     changed_by_id BIGINT,
     changed_by_username VARCHAR(255),
-    CONSTRAINT pk_p_email PRIMARY KEY (user_id, email_type)
+    CONSTRAINT pk_p_email PRIMARY KEY (user_id, email_type, is_primary)
 );
 
 CREATE TABLE IF NOT EXISTS p_phone (
@@ -16,11 +16,12 @@ CREATE TABLE IF NOT EXISTS p_phone (
     phone_type VARCHAR(50) NOT NULL,
     country_code VARCHAR(10),
     area_code VARCHAR(10),
+    is_primary BOOLEAN DEFAULT FALSE,
     phone_number VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE,
     created_by_id BIGINT,
     created_by_username VARCHAR(255),
     changed_by_id BIGINT,
     changed_by_username VARCHAR(255),
-    CONSTRAINT pk_p_phone PRIMARY KEY (user_id, phone_type)
+    CONSTRAINT pk_p_phone PRIMARY KEY (user_id, phone_type, is_primary)
 );

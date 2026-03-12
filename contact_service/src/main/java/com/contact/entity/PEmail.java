@@ -13,8 +13,7 @@ public class PEmail {
     @Column(name = "email_address", length = 255, nullable = false)
     private String emailAddress;
 
-    @Column(name = "is_primary", nullable = false)
-    private Boolean isPrimary = false;
+    // isPrimary is part of the embedded id (composite PK)
 
     @Column(name = "created_at", columnDefinition = "timestamp with time zone")
     private OffsetDateTime createdAt;
@@ -55,8 +54,14 @@ public class PEmail {
     public String getEmailAddress() { return emailAddress; }
     public void setEmailAddress(String emailAddress) { this.emailAddress = emailAddress; }
 
-    public Boolean getIsPrimary() { return isPrimary; }
-    public void setIsPrimary(Boolean isPrimary) { this.isPrimary = isPrimary; }
+    public Boolean getIsPrimary() {
+        return id == null ? null : id.getIsPrimary();
+    }
+
+    public void setIsPrimary(Boolean isPrimary) {
+        if (this.id == null) this.id = new PEmailId();
+        this.id.setIsPrimary(isPrimary);
+    }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
